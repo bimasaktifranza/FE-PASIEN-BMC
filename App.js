@@ -1,20 +1,30 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState, useEffect } from "react";
+import { NativeRouter, Routes, Route } from "react-router-native";
+import SplashScreen from "./Page/SplashScreen";
+import LoginScreen from "./Page/LoginScreen/LoginScreen";
+import MainScreen from "./Page/MainScreen/MainScreen";
 
 export default function App() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Saat loading tampilkan SplashScreen
+  if (isLoading) {
+    return <SplashScreen />;
+  }
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NativeRouter>
+      <Routes>
+        <Route path="/" element={<LoginScreen />} />
+        <Route path="/home" element={<MainScreen />} />
+      </Routes>
+    </NativeRouter>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
