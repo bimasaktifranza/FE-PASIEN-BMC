@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-native'; 
+import { useNavigate } from 'react-router-native';
 import {
     View,
     Text,
@@ -11,39 +11,42 @@ import {
     Platform,
     Dimensions,
     Animated,
-    Easing
+    Easing,
+    RefreshControl
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons'; 
+import Icon from 'react-native-vector-icons/Ionicons';
 
 // URL API yang disediakan
 const API_URL = 'https://restful-api-bmc-production.up.railway.app/api/konten-edukasi';
 
-// Warna dan Konstanta Desain (Dipertahankan dan ditingkatkan)
+// =================================================================
+// ✨ Warna dan Konstanta Desain (Disesuaikan untuk Biru + Putih Minimalis) ✨
+// =================================================================
 const COLORS = {
-    primary: '#007BFF',      
-    secondary: '#28A745',    
-    background: '#F8F9FA',   
-    card: '#FFFFFF',         
-    textDark: '#333333',     
-    textLight: '#6C757D',    
-    accent: '#FFC107',       
-    error: '#DC3545',
-    toastError: '#DC3545',
-    toastSuccess: '#28A745',
-    toastText: '#FFFFFF',
-    shadow: 'rgba(0, 0, 0, 0.15)',
+    // Palet Biru dan Putih yang Bersih dan Menenangkan
+    primaryBlue: '#2196F3', // Biru standar yang cerah dan profesional
+    darkBlue: '#1976D2', // Biru yang lebih gelap untuk aksen kuat
+    lightBlue: '#E3F2FD', // Biru sangat terang, hampir putih, untuk latar belakang/aksen lembut
+    white: '#FFFFFF', // Putih murni
+    offWhite: '#F8F9FA', // Putih gading untuk latar belakang section
+    textPrimary: '#263238', // Abu-abu gelap, mudah dibaca
+    textSecondary: '#607D8B', // Abu-abu kebiruan untuk teks sekunder
+    accentSuccess: '#4CAF50', // Hijau untuk sukses (toast)
+    accentError: '#F44336', // Merah untuk error (toast)
+    shadow: 'rgba(0, 0, 0, 0.08)', // Bayangan sangat lembut
+    border: '#E0E0E0', // Garis batas tipis
 };
 
 const SHADOW_STYLE = {
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5, 
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2, // Sedikit lebih terlihat untuk efek "melayang"
+    shadowRadius: 6,
+    elevation: 6,
 };
 
 // =================================================================
-//  Toast Notification
+//  Toast Notification (Disesuaikan warnanya)
 // =================================================================
 const Toast = ({ message, isVisible, onDismiss, type = 'error' }) => {
     const fadeAnim = new Animated.Value(0);
@@ -72,7 +75,7 @@ const Toast = ({ message, isVisible, onDismiss, type = 'error' }) => {
 
     if (!isVisible) return null;
 
-    const backgroundColor = type === 'error' ? COLORS.toastError : COLORS.toastSuccess;
+    const backgroundColor = type === 'error' ? COLORS.accentError : COLORS.accentSuccess;
 
     return (
         <Animated.View style={[styles.toastContainer, { opacity: fadeAnim, backgroundColor }]}>
@@ -82,14 +85,41 @@ const Toast = ({ message, isVisible, onDismiss, type = 'error' }) => {
 };
 
 // =================================================================
-//  Content Formatter
+//  Content Formatter (Disempurnakan untuk gaya minimalis)
 // =================================================================
 const FormattedContent = ({ content }) => {
     const paragraphs = content.split('\n\n').filter(p => p.trim() !== '');
 
     const renderLine = (line, key) => {
-        const parts = line.split(/(\*\*.*?\*\*)/g).filter(Boolean);
+        const trimmedLine = line.trim();
+        const parts = trimmedLine.split(/(\*\*.*?\*\*)/g).filter(Boolean);
 
+        // 1. Cek apakah ini daftar (misalnya, dimulai dengan '-' atau '*')
+        if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
+            return (
+                <View key={key} style={styles.listItem}>
+                    <Icon name="ellipse" size={5} color={COLORS.primaryBlue} style={styles.listBullet} />
+                    <Text style={styles.contentListItem}>
+                        {parts.map((part, i) => {
+                            if (part.startsWith('**') && part.endsWith('**')) {
+                                return (
+                                    <Text key={i} style={styles.contentBold}>
+                                        {part.slice(2, -2)}
+                                    </Text>
+                                );
+                            }
+                            // Hapus bullet point dari teks item
+                            const textPart = i === 0 && (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* '))
+                                ? part.substring(2)
+                                : part;
+                            return textPart;
+                        })}
+                    </Text>
+                </View>
+            );
+        }
+
+        // 2. Jika bukan daftar, render sebagai paragraf biasa
         return (
             <Text key={key} style={styles.contentParagraph}>
                 {parts.map((part, i) => {
@@ -119,12 +149,13 @@ const FormattedContent = ({ content }) => {
 };
 
 // =================================================================
-//  Main Screen (Menggunakan useNavigate dari React Router Native)
+//  Main Screen (Diperbarui dengan gaya Biru + Putih)
 // =================================================================
 export default function EdukasiScreen() {
-    const navigate = useNavigate(); 
+    const navigate = useNavigate();
     const [data, setData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState(null);
     const [selectedContent, setSelectedContent] = useState(null);
 
@@ -137,7 +168,7 @@ export default function EdukasiScreen() {
         setToastType(type);
         setToastVisible(true);
         if (type === 'error') {
-            setError(message); 
+            setError(message);
         }
     };
 
@@ -145,18 +176,21 @@ export default function EdukasiScreen() {
         setToastVisible(false);
         setToastMessage('');
         setToastType('error');
-        if (error) {
-            setError(null);
-        }
     };
 
     useEffect(() => {
         fetchData();
     }, []);
 
-    const fetchData = async () => {
+    const fetchData = async (isManualRefresh = false) => {
         try {
-            setIsLoading(true);
+            if (isManualRefresh) {
+                setIsRefreshing(true);
+            } else {
+                setIsLoading(true);
+            }
+            setError(null);
+
             const response = await fetch(API_URL);
 
             if (!response.ok) {
@@ -167,7 +201,7 @@ export default function EdukasiScreen() {
 
             if (json.status === 'success' && Array.isArray(json.data)) {
                 setData(json.data);
-                if (json.data.length === 0) {
+                if (json.data.length === 0 && !isManualRefresh) {
                     showToast('Konten edukasi belum tersedia.', 'success');
                 }
             } else {
@@ -178,29 +212,31 @@ export default function EdukasiScreen() {
             showToast('Gagal memuat konten edukasi. Periksa koneksi atau coba lagi nanti.');
         } finally {
             setIsLoading(false);
+            setIsRefreshing(false);
         }
     };
 
-    // Fungsi kembali ke halaman sebelumnya (MainScreen.js) menggunakan React Router Native
-    const handleGoBackToMain = () => {
-        navigate(-1); 
+    const handleRefresh = () => {
+        fetchData(true);
     };
 
-    // Detail Screen
+    const handleGoBackToMain = () => {
+        navigate(-1);
+    };
+
     const renderContentDetail = () => {
         if (!selectedContent) return null;
 
-        const { judul_konten, isi_konten } = selectedContent;
+        const { judul_konten, isi_konten, kategori } = selectedContent;
 
         return (
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.detailHeader}>
-                    {/* Tombol kembali ke list */}
                     <TouchableOpacity
                         onPress={() => setSelectedContent(null)}
                         style={styles.backButton}
                     >
-                        <Icon name="arrow-back-outline" size={24} color={COLORS.primary} />
+                        <Icon name="arrow-back-outline" size={28} color={COLORS.primaryBlue} />
                     </TouchableOpacity>
 
                     <Text
@@ -216,14 +252,20 @@ export default function EdukasiScreen() {
                     style={styles.detailScrollView}
                     contentContainerStyle={styles.detailContentPadding}
                 >
-                    <Text style={styles.sectionHeading}>Informasi Detail</Text>
-                    
+                    <View style={styles.categoryLabel}>
+                        <Icon name="bookmark-outline" size={14} color={COLORS.white} />
+                        <Text style={styles.categoryText}>{kategori || "Umum"}</Text>
+                    </View>
+                    <View style={styles.separator} />
+
+                    <Text style={styles.sectionHeading}>Isi Konten</Text>
+
                     <FormattedContent content={isi_konten} />
 
                     <View style={styles.footerInfo}>
-                        <Icon name="information-circle-outline" size={20} color={COLORS.accent} />
+                        <Icon name="information-circle-outline" size={24} color={COLORS.darkBlue} style={{ marginTop: 3 }} />
                         <Text style={styles.footerText}>
-                            **Penting:** Konten ini disediakan untuk tujuan edukasi dan bukan pengganti saran medis profesional. Selalu konsultasikan masalah kesehatan Anda dengan dokter.
+                            **Penting untuk Bunda:** Konten ini bersifat edukasi umum dan **bukan pengganti** nasihat medis profesional. Selalu konsultasikan masalah kesehatan atau kehamilan Anda dengan **dokter atau bidan** terpercaya.
                         </Text>
                     </View>
                 </ScrollView>
@@ -231,63 +273,71 @@ export default function EdukasiScreen() {
         );
     };
 
-    // List Screen
     const renderContentList = () => {
-        // --- Loading State ---
-        if (isLoading) {
+        if (isLoading && !isRefreshing) {
             return (
                 <View style={styles.center}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Memuat Konten...</Text>
+                    <ActivityIndicator size="large" color={COLORS.primaryBlue} />
+                    <Text style={styles.loadingText}>Memuat Konten Kesehatan Bunda...</Text>
                 </View>
             );
         }
 
-        // --- Error/Empty State ---
         if (data.length === 0 && error) {
             return (
                 <View style={styles.center}>
-                    <Icon name="sad-outline" size={60} color={COLORS.error} style={{marginBottom: 10}}/>
-                    <Text style={styles.errorTextCenter}>Terjadi kesalahan: {error}</Text>
+                    <Icon name="cloud-offline-outline" size={70} color={COLORS.accentError} style={{ marginBottom: 15 }} />
+                    <Text style={styles.errorTextCenter}>Gagal memuat data!</Text>
+                    <Text style={styles.errorTextDetail}>{error}</Text>
                     <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
                         <Text style={styles.retryButtonText}>Coba Lagi</Text>
                     </TouchableOpacity>
-                    {/* Tombol kembali ke MainScreen */}
                     <TouchableOpacity style={styles.backToMainButton} onPress={handleGoBackToMain}>
                         <Text style={styles.backToMainText}>Kembali ke Menu Utama</Text>
                     </TouchableOpacity>
+                    <Toast
+                        message={toastMessage}
+                        isVisible={toastVisible}
+                        onDismiss={dismissToast}
+                        type={toastType}
+                    />
                 </View>
             );
         }
 
-        // --- Main List ---
         return (
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.listHeader}>
                     <View style={styles.listHeaderRow}>
-                         {/* Tombol kembali ke main screen (Menggunakan navigate(-1)) */}
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={handleGoBackToMain}
                             style={styles.mainBackButton}
                         >
-                            <Icon name="chevron-back-outline" size={30} color={COLORS.primary} />
+                            <Icon name="chevron-back-outline" size={30} color={COLORS.primaryBlue} />
                         </TouchableOpacity>
-                        <Text style={styles.screenTitle}>Pusat Edukasi Kesehatan 📚</Text>
+                        <Text style={styles.screenTitle}>Pusat Edukasi Bunda 💙</Text>
                     </View>
-                    
+
                     <Text style={styles.screenSubtitle}>
-                        Tingkatkan pengetahuan Anda! Pilih topik di bawah ini.
+                        Tingkatkan pengetahuan kesehatan kehamilan para Bunda.
                     </Text>
                 </View>
 
-                <ScrollView 
+                <ScrollView
                     style={styles.listScrollView}
                     contentContainerStyle={styles.listContentPadding}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isRefreshing}
+                            onRefresh={handleRefresh}
+                            tintColor={COLORS.primaryBlue}
+                        />
+                    }
                 >
                     {data.length === 0 ? (
                         <View style={styles.centerList}>
-                            <Icon name="folder-open-outline" size={50} color={COLORS.textLight} style={{marginBottom: 10}}/>
-                            <Text style={styles.emptyText}>Belum ada konten edukasi tersedia saat ini.</Text>
+                            <Icon name="information-circle-outline" size={60} color={COLORS.textSecondary} style={{ marginBottom: 15 }} />
+                            <Text style={styles.emptyText}>Belum ada konten edukasi tersedia saat ini. Silakan tarik ke bawah untuk memuat ulang.</Text>
                         </View>
                     ) : (
                         data.map(item => (
@@ -295,25 +345,26 @@ export default function EdukasiScreen() {
                                 key={item.id}
                                 style={styles.card}
                                 onPress={() => setSelectedContent(item)}
-                                activeOpacity={0.8}
+                                activeOpacity={0.7}
                             >
-                                <View style={styles.cardContent}>
-                                    <Icon name="document-text-outline" size={20} color={COLORS.primary} style={styles.cardIcon} />
-                                    <Text style={styles.cardTitle}>{item.judul_konten}</Text>
+                                <View style={styles.cardIconCircle}>
+                                    <Icon name="document-text-outline" size={24} color={COLORS.primaryBlue} />
                                 </View>
-                                
-                                <Icon name="chevron-forward" size={24} color={COLORS.secondary} />
+                                <View style={styles.cardContent}>
+                                    <Text style={styles.cardTitle}>{item.judul_konten}</Text>
+                                    <Text style={styles.cardSubtitle}>Baca selengkapnya...</Text>
+                                </View>
+
+                                <Icon name="chevron-forward" size={24} color={COLORS.textSecondary} />
                             </TouchableOpacity>
                         ))
                     )}
-                    
-                    {/* --- FOOTER HAK CIPTA BARU --- */}
+
                     <View style={styles.copyrightFooter}>
                         <Text style={styles.copyrightText}>© 2025 Ruang Bunda</Text>
                     </View>
-                    {/* --- END FOOTER --- */}
 
-                    <View style={{ height: 50 }} /> 
+                    <View style={{ height: 50 }} />
                 </ScrollView>
 
                 <Toast
@@ -327,71 +378,82 @@ export default function EdukasiScreen() {
     };
 
     return selectedContent ? renderContentDetail() : renderContentList();
-};
+}
 
 // =================================================================
-//  Styles (Diperluas dengan Footer Style)
+//  Styles (Diperbarui dengan gaya Biru + Putih Minimalis)
 // =================================================================
 const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: COLORS.offWhite, // Latar belakang off-white
     },
+    // --- Global Center Styles ---
     center: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
+        backgroundColor: COLORS.offWhite,
     },
     centerList: {
         justifyContent: 'center',
         alignItems: 'center',
-        paddingVertical: 40,
+        paddingVertical: 60,
+        paddingHorizontal: 20,
     },
     loadingText: {
-        marginTop: 10,
-        color: COLORS.textLight,
-        fontSize: 16,
+        marginTop: 15,
+        color: COLORS.textSecondary,
+        fontSize: 18,
+        fontWeight: '500',
     },
     errorTextCenter: {
-        color: COLORS.error,
+        color: COLORS.accentError,
+        marginBottom: 5,
+        paddingHorizontal: 20,
+        textAlign: 'center',
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    errorTextDetail: {
+        color: COLORS.textSecondary,
         marginBottom: 20,
         paddingHorizontal: 20,
         textAlign: 'center',
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: 14,
     },
     emptyText: {
-        color: COLORS.textLight,
+        color: COLORS.textSecondary,
         fontSize: 16,
         textAlign: 'center',
-        padding: 20,
+        lineHeight: 24,
     },
     retryButton: {
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 25,
+        backgroundColor: COLORS.primaryBlue,
+        paddingHorizontal: 30,
+        paddingVertical: 12,
+        borderRadius: 30,
         ...SHADOW_STYLE,
         marginBottom: 10,
     },
     retryButtonText: {
-        color: COLORS.card,
+        color: COLORS.white,
         fontWeight: 'bold',
         fontSize: 16,
     },
     backToMainButton: {
-        borderColor: COLORS.primary,
+        borderColor: COLORS.primaryBlue,
         borderWidth: 1,
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 25,
+        paddingHorizontal: 30,
+        paddingVertical: 12,
+        borderRadius: 30,
         marginTop: 10,
     },
     backToMainText: {
-        color: COLORS.primary,
+        color: COLORS.primaryBlue,
         fontWeight: 'bold',
         fontSize: 16,
     },
@@ -399,11 +461,13 @@ const styles = StyleSheet.create({
     // --- List Header ---
     listHeader: {
         paddingHorizontal: 20,
-        paddingBottom: 15,
+        paddingBottom: 20,
         paddingTop: Platform.OS === 'android' ? 30 : 10,
-        backgroundColor: COLORS.card,
+        backgroundColor: COLORS.white,
         ...SHADOW_STYLE,
-        marginBottom: 10,
+        marginBottom: 15,
+        borderBottomLeftRadius: 15, // Sudut sedikit melengkung
+        borderBottomRightRadius: 15,
     },
     listHeaderRow: {
         flexDirection: 'row',
@@ -415,16 +479,16 @@ const styles = StyleSheet.create({
         padding: 5,
     },
     screenTitle: {
-        fontSize: 24,
-        fontWeight: '900',
-        color: COLORS.primary,
+        fontSize: 26,
+        fontWeight: '800',
+        color: COLORS.darkBlue, // Menggunakan darkBlue untuk judul utama
         flex: 1,
     },
     screenSubtitle: {
-        fontSize: 14,
-        color: COLORS.textLight,
-        marginTop: 5,
-        marginLeft: 40, 
+        fontSize: 16,
+        color: COLORS.textSecondary,
+        marginTop: 8,
+        marginLeft: 45,
     },
     listScrollView: {
         flex: 1,
@@ -434,31 +498,41 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
     },
 
-    // --- Card ---
+    // --- Card (Desain Minimalis Modern) ---
     card: {
-        backgroundColor: COLORS.card,
+        backgroundColor: COLORS.white,
         padding: 18,
-        borderRadius: 12, 
-        marginVertical: 6,
+        borderRadius: 12, // Lebih halus
+        marginVertical: 8,
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
         ...SHADOW_STYLE,
+        borderLeftWidth: 4, // Aksen garis biru
+        borderLeftColor: COLORS.primaryBlue,
+    },
+    cardIconCircle: {
+        width: 48, // Sedikit lebih besar
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: COLORS.lightBlue, // Biru terang untuk latar belakang ikon
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
     },
     cardContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
         flex: 1,
         paddingRight: 10,
     },
-    cardIcon: {
-        marginRight: 15,
-    },
     cardTitle: {
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: '700',
-        color: COLORS.textDark,
-        flex: 1,
+        color: COLORS.textPrimary,
+        marginBottom: 3,
+    },
+    cardSubtitle: {
+        fontSize: 13,
+        color: COLORS.textSecondary,
+        fontWeight: '400',
     },
 
     // --- Detail Screen ---
@@ -468,71 +542,118 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         paddingBottom: 15,
         paddingTop: Platform.OS === 'android' ? 30 : 10,
-        backgroundColor: COLORS.card,
+        backgroundColor: COLORS.white,
         ...SHADOW_STYLE,
+        borderBottomLeftRadius: 15,
+        borderBottomRightRadius: 15,
     },
     backButton: {
         padding: 5,
         marginRight: 10,
     },
     detailTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
-        color: COLORS.textDark,
+        color: COLORS.textPrimary,
         flex: 1,
     },
-
     detailScrollView: { flex: 1 },
     detailContentPadding: { padding: 20 },
 
+    // --- Detail Content Styles ---
+    categoryLabel: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.primaryBlue,
+        paddingHorizontal: 12, // Lebih lebar
+        paddingVertical: 6, // Lebih tinggi
+        borderRadius: 20, // Lebih bulat
+        alignSelf: 'flex-start',
+        marginBottom: 15,
+        ...SHADOW_STYLE, // Tambah shadow untuk menonjolkan
+    },
+    categoryText: {
+        marginLeft: 8, // Jarak lebih
+        color: COLORS.white,
+        fontSize: 14, // Lebih besar
+        fontWeight: '600',
+    },
+    separator: {
+        height: 1,
+        backgroundColor: COLORS.border, // Warna border
+        marginBottom: 20,
+        marginTop: 5, // Jarak sedikit
+    },
     sectionHeading: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: '800',
-        color: COLORS.primary,
+        color: COLORS.darkBlue, // Judul section lebih menonjol
         marginBottom: 15,
     },
-
     contentContainer: { marginBottom: 20 },
     contentParagraph: {
         fontSize: 16,
-        color: COLORS.textDark,
-        marginBottom: 15, 
-        lineHeight: 24, 
+        color: COLORS.textPrimary,
+        marginBottom: 15,
+        lineHeight: 25, // Line height lebih nyaman
         textAlign: 'justify',
     },
     contentBold: {
         fontWeight: 'bold',
-        color: COLORS.primary,
+        color: COLORS.darkBlue, // Bold dengan dark blue
     },
 
-    footerInfo: {
-        marginTop: 30,
-        borderTopWidth: 1,
-        borderTopColor: '#E9ECEF',
-        paddingTop: 15,
+    // List item (Poin-poin)
+    listItem: {
         flexDirection: 'row',
         alignItems: 'flex-start',
+        marginBottom: 10,
+        paddingLeft: 5,
+    },
+    listBullet: {
+        marginTop: 8,
+        marginRight: 10,
+    },
+    contentListItem: {
+        flex: 1,
+        fontSize: 16,
+        color: COLORS.textPrimary,
+        lineHeight: 25,
+        textAlign: 'justify',
+    },
+
+    // Catatan Kaki Detail
+    footerInfo: {
+        marginTop: 30,
+        padding: 18, // Padding lebih besar
+        backgroundColor: COLORS.lightBlue, // Latar belakang biru terang
+        borderRadius: 12,
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        borderLeftWidth: 5, // Border kiri lebih tebal
+        borderLeftColor: COLORS.darkBlue, // Warna biru tua
+        ...SHADOW_STYLE,
     },
     footerText: {
         marginLeft: 10,
-        fontSize: 13,
-        color: COLORS.textLight,
+        fontSize: 14,
+        color: COLORS.textPrimary,
         fontStyle: 'italic',
         flex: 1,
+        lineHeight: 22,
     },
-    
-    // --- Footer Hak Cipta BARU ---
+
+    // --- Footer Hak Cipta ---
     copyrightFooter: {
         paddingVertical: 20,
         alignItems: 'center',
-        borderTopWidth: 1,
-        borderTopColor: '#e0e0e0',
         marginTop: 20,
     },
     copyrightText: {
-        fontSize: 12,
-        color: COLORS.textLight,
+        fontSize: 13,
+        color: COLORS.textSecondary,
         fontWeight: '400',
+        textAlign: 'center',
     },
 
     // --- Toast ---
@@ -546,7 +667,7 @@ const styles = StyleSheet.create({
         zIndex: 1000,
     },
     toastText: {
-        color: COLORS.toastText,
+        color: COLORS.white,
         textAlign: 'center',
         fontWeight: '600',
     },
