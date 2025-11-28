@@ -44,7 +44,7 @@ const SHADOW_STYLE = {
     elevation: 6,
 };
 
-
+//  Toast Notifikasi 
 const Toast = ({ message, isVisible, onDismiss, type = 'error' }) => {
     const fadeAnim = new Animated.Value(0);
 
@@ -82,6 +82,7 @@ const Toast = ({ message, isVisible, onDismiss, type = 'error' }) => {
 };
 
 
+//  Content Formatter 
 const FormattedContent = ({ content }) => {
     const paragraphs = content.split('\n\n').filter(p => p.trim() !== '');
 
@@ -89,6 +90,7 @@ const FormattedContent = ({ content }) => {
         const trimmedLine = line.trim();
         const parts = trimmedLine.split(/(\*\*.*?\*\*)/g).filter(Boolean);
 
+        // 1. Cek apakah ini daftar (misalnya, dimulai dengan '-' atau '*')
         if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
             return (
                 <View key={key} style={styles.listItem}>
@@ -102,7 +104,7 @@ const FormattedContent = ({ content }) => {
                                     </Text>
                                 );
                             }
-                            
+
                             const textPart = i === 0 && (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* '))
                                 ? part.substring(2)
                                 : part;
@@ -113,6 +115,7 @@ const FormattedContent = ({ content }) => {
             );
         }
 
+        // 2. Jika bukan daftar, render sebagai paragraf biasa
         return (
             <Text key={key} style={styles.contentParagraph}>
                 {parts.map((part, i) => {
@@ -142,6 +145,7 @@ const FormattedContent = ({ content }) => {
 };
 
 
+//  Main Screen 
 export default function EdukasiScreen() {
     const navigate = useNavigate();
     const [data, setData] = useState([]);
@@ -371,7 +375,7 @@ export default function EdukasiScreen() {
     return selectedContent ? renderContentDetail() : renderContentList();
 }
 
-
+//  Style
 const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
@@ -379,7 +383,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: COLORS.offWhite, 
     },
-
+    
     center: {
         flex: 1,
         justifyContent: 'center',
@@ -487,7 +491,7 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
     },
 
-
+    // --- Card (Desain Minimalis Modern) ---
     card: {
         backgroundColor: COLORS.white,
         padding: 18,
@@ -496,11 +500,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         ...SHADOW_STYLE,
-        borderLeftWidth: 4,
+        borderLeftWidth: 4, 
         borderLeftColor: COLORS.primaryBlue,
     },
     cardIconCircle: {
-        width: 48,
+        width: 48, 
         height: 48,
         borderRadius: 24,
         backgroundColor: COLORS.lightBlue, 
@@ -524,6 +528,7 @@ const styles = StyleSheet.create({
         fontWeight: '400',
     },
 
+    // --- Detail Screen ---
     detailHeader: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -548,12 +553,13 @@ const styles = StyleSheet.create({
     detailScrollView: { flex: 1 },
     detailContentPadding: { padding: 20 },
 
+    // --- Detail Content Styles ---
     categoryLabel: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: COLORS.primaryBlue,
         paddingHorizontal: 12, 
-        paddingVertical: 6, 
+        paddingVertical: 6,
         borderRadius: 20, 
         alignSelf: 'flex-start',
         marginBottom: 15,
@@ -587,10 +593,10 @@ const styles = StyleSheet.create({
     },
     contentBold: {
         fontWeight: 'bold',
-        color: COLORS.darkBlue,
+        color: COLORS.darkBlue, 
     },
 
-
+    // List item (Poin-poin)
     listItem: {
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -609,7 +615,7 @@ const styles = StyleSheet.create({
         textAlign: 'justify',
     },
 
-
+    // Catatan Kaki 
     footerInfo: {
         marginTop: 30,
         padding: 18, 
@@ -630,6 +636,7 @@ const styles = StyleSheet.create({
         lineHeight: 22,
     },
 
+    // --- Footer Hak Cipta ---
     copyrightFooter: {
         paddingVertical: 20,
         alignItems: 'center',

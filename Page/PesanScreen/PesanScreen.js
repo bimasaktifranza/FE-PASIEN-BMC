@@ -13,10 +13,12 @@ import {
   Platform,
 } from "react-native";
 
+// --- MOCK LIBRARY UNTUK KOMPILASI DI WEB ---
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigate } from "react-router-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// MOCK FALLBACK
 const MockIonicons = ({ size, color }) => (
   <Text style={{ fontSize: size, color }}>Icon</Text>
 );
@@ -29,8 +31,9 @@ const MockAsyncStorage = { getItem: async () => "mock-token-12345" };
 const { width } = Dimensions.get("window");
 
 
+// ✨ Warna dan Desain 
 const COLORS = {
-  
+  // Palet Biru dan Putih yang Bersih dan Menenangkan
   primaryBlue: '#2196F3', 
   darkBlue: '#1976D2', 
   lightBlue: '#E3F2FD', 
@@ -39,8 +42,8 @@ const COLORS = {
   textPrimary: '#263238', 
   textSecondary: '#607D8B', 
   accentSuccess: '#4CAF50', 
-  accentError: '#F44336',
-  shadow: 'rgba(0, 0, 0, 0.08)',
+  accentError: '#F44336', 
+  shadow: 'rgba(0, 0, 0, 0.08)', 
   border: '#E0E0E0', 
 };
 
@@ -52,6 +55,8 @@ const SHADOW_STYLE = {
   elevation: 6,
 };
 
+
+// CHAT BUBBLE COMPONENT 
 const MessageBubble = ({ item }) => {
   const isPatient = item.isPatient;
   const AppIonicons = Ionicons || MockIonicons; 
@@ -91,12 +96,12 @@ const MessageBubble = ({ item }) => {
 };
 
 
-
+// MAIN SCREEN 
 export default function PesanScreen() {
 
   let navigate;
   try {
-    navigate = useNavigate(); 
+    navigate = useNavigate();
   } catch {
     navigate = (path) =>
       console.log("Mock navigate to:", path); 
@@ -121,7 +126,7 @@ export default function PesanScreen() {
   // Auto scroll
   useEffect(() => {
     if (scrollViewRef.current) {
-      
+      // Delay scroll sedikit agar bubble sempat di-render
       setTimeout(() => {
         scrollViewRef.current.scrollToEnd({ animated: true });
       }, 100);
@@ -132,7 +137,7 @@ export default function PesanScreen() {
     navigate(-1); 
   };
 
-  
+  // FETCH PESAN
   const loadPesan = async () => {
     setIsLoading(true);
     setErrorMessage("");
@@ -140,6 +145,7 @@ export default function PesanScreen() {
     try {
       const token = await AppAsyncStorage.getItem("userToken");
 
+      // Menggunakan mock data API
       const res = await fetch(
         `https://restful-api-bmc-production.up.railway.app/api/pesan/${noReg}/${bulan}`,
         {
@@ -149,6 +155,7 @@ export default function PesanScreen() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Gagal memuat pesan");
+
 
       const dataWithSender = (data.data || []).map((item, index) => ({
         ...item,
@@ -176,7 +183,7 @@ export default function PesanScreen() {
     loadPesan();
   }, []);
 
-  
+  // KIRIM PESAN
   const handleKirimPesan = async () => {
     if (!pesanBaru.trim()) {
       AppAlert.alert("Info", "Pesan tidak boleh kosong.");
@@ -198,7 +205,7 @@ export default function PesanScreen() {
 
     setPesanData((p) => [...p, newSentMessage]);
     setModalVisible(false);
-
+    // setIsLoading(true); // Tidak perlu loading penuh, cukup tunggu sedikit.
 
     try {
       const token = await AppAsyncStorage.getItem("userToken");
@@ -221,9 +228,12 @@ export default function PesanScreen() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
+      // AppAlert.alert("Berhasil", data.message); // Tidak perlu alert setelah kirim
+      // Refresh data setelah berhasil kirim
       loadPesan(); 
 
     } catch (e) {
+      // Hapus pesan yang gagal dikirim
       setPesanData((p) => p.filter((msg) => msg.id !== newSentMessage.id)); 
       AppAlert.alert("Gagal Kirim", `Pesan tidak terkirim. ${e.message}`);
       setModalVisible(true); 
@@ -232,7 +242,7 @@ export default function PesanScreen() {
     }
   };
 
-
+  // RENDER
   return (
     <View style={styles.fullContainer}>
       {/* HEADER */}
@@ -345,8 +355,7 @@ export default function PesanScreen() {
   );
 }
 
-
-// Style EdukasiScreen
+// Style
 const styles = StyleSheet.create({
   fullContainer: { flex: 1, backgroundColor: COLORS.offWhite },
 
@@ -408,6 +417,7 @@ const styles = StyleSheet.create({
   },
   noData: { color: COLORS.textSecondary, textAlign: "center", marginTop: 10, fontSize: 15, paddingHorizontal: 20 },
 
+  // --- Chat Bubbles ---
   messageContainer: { flexDirection: "row", marginHorizontal: 10, marginBottom: 8 },
   patientContainer: { justifyContent: "flex-end" },
   staffContainer: { justifyContent: "flex-start" },
@@ -459,6 +469,7 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: COLORS.darkBlue, 
+    justifyContent: "center",
     alignItems: "center",
     zIndex: 10,
   },
