@@ -12,28 +12,69 @@ import {
   ActivityIndicator,
   Modal,
 } from "react-native";
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import { FontAwesome, Ionicons, Feather } from "@expo/vector-icons"; // Tambah Feather
 import { useNavigate } from "react-router-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { BlurView } from "expo-blur"; // Pastikan ini sudah terinstal
+import { BlurView } from "expo-blur";
 
-const CustomAlert = ({ visible, title, message, type, onClose }) => {
-  const isError = type === "error";
-  const iconName = isError ? "close-circle" : "information-circle";
-  const iconColor = isError ? "#F44336" : "#2196F3";
+// === TEMA WARNA (Disamakan dengan HomeCatatanPartograf) ===
+const THEME = {
+  active: "#29B6F6",
+  danger: "#E53935",
+  success: "#2E7D32",
+  warning: "#FFB300",
+  textMain: "#263238",
+  card: "#FFFFFF"
+};
+
+// === CUSTOM MODAL BARU (Persis HomeCatatanPartograf) ===
+const CustomAlertModal = ({ visible, title, message, type, onClose }) => {
+  // Konfigurasi Warna & Icon Pastel
+  const getConfig = () => {
+    switch (type) {
+      case "error": // Mapping 'error' ke style 'danger'
+      case "danger":
+        return { 
+          icon: "alert-circle", 
+          color: "#FF5252", 
+          bgColor: "#FFEBEE" // Merah muda lembut
+        };
+      case "success":
+        return { 
+          icon: "check-circle", 
+          color: "#4CAF50", 
+          bgColor: "#E8F5E9" // Hijau muda lembut
+        };
+      case "info":
+      default:
+        return { 
+          icon: "info", 
+          color: "#2196F3", 
+          bgColor: "#E3F2FD" // Biru muda lembut
+        };
+    }
+  };
+
+  const config = getConfig();
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
-          <Ionicons name={iconName} size={60} color={iconColor} style={{ marginBottom: 10 }} />
-          <Text style={styles.modalTitle}>{title}</Text>
-          <Text style={styles.modalMessage}>{message}</Text>
+      <View style={modalStyles.backdrop}>
+        <View style={modalStyles.alertBox}>
+          {/* Header Icon dengan Background Lingkaran Pastel */}
+          <View style={[modalStyles.iconContainer, { backgroundColor: config.bgColor }]}>
+            <Feather name={config.icon} size={40} color={config.color} />
+          </View>
+
+          <Text style={modalStyles.title}>{title}</Text>
+          <Text style={modalStyles.message}>{message}</Text>
+
           <TouchableOpacity
-            style={[styles.modalButton, { backgroundColor: iconColor }]}
+            style={[modalStyles.button, { backgroundColor: config.color }]}
             onPress={onClose}
+            activeOpacity={0.8}
           >
-            <Text style={styles.modalButtonText}>Tutup</Text>
+            <Text style={modalStyles.buttonText}>Mengerti, Bunda</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -47,7 +88,8 @@ export default function LoginScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  
+  // Config Alert sekarang menangani Success juga
   const [alertConfig, setAlertConfig] = useState({ visible: false, title: "", message: "", type: "info" });
 
   const navigate = useNavigate();
@@ -56,9 +98,13 @@ export default function LoginScreen() {
     setAlertConfig({ visible: true, title, message, type });
   };
 
+  const closeAlert = () => {
+    setAlertConfig({ ...alertConfig, visible: false });
+  };
+
   const handleLogin = async () => {
     if (!username || !password) {
-      showAlert("Data Belum Lengkap", "Username dan Password tidak boleh kosong.", "error");
+      showAlert("Data Belum Lengkap", "Username dan Password tidak boleh kosong.", "danger");
       return;
     }
     setIsLoading(true);
@@ -73,32 +119,33 @@ export default function LoginScreen() {
       
       setIsLoading(false);
       if (data.token) await AsyncStorage.setItem("userToken", data.token);
-      setShowSuccess(true);
-      setTimeout(() => { setShowSuccess(false); navigate("/home"); }, 1500);
+
+      // Tampilkan Alert Sukses dengan desain baru
+      showAlert("Login Berhasil", "Selamat datang kembali di Ruang Bunda.", "success");
+
+      // Redirect otomatis setelah 1.5 detik
+      setTimeout(() => { 
+        closeAlert();
+        navigate("/home"); 
+      }, 1500);
+
     } catch (error) {
       setIsLoading(false);
-      showAlert("Gagal Masuk", error.message, "error");
+      showAlert("Gagal Masuk", error.message, "danger");
     }
   };
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <CustomAlert 
+      
+      {/* Alert Modal Baru */}
+      <CustomAlertModal 
         visible={alertConfig.visible} 
         title={alertConfig.title} 
         message={alertConfig.message} 
         type={alertConfig.type} 
-        onClose={() => setAlertConfig({ ...alertConfig, visible: false })} 
+        onClose={closeAlert} 
       />
-
-      {showSuccess && (
-        <View style={styles.successOverlay}>
-          <View style={styles.successBox}>
-            <FontAwesome name="check-circle" size={55} color="#4CAF50" />
-            <Text style={styles.successTitle}>Login Berhasil</Text>
-          </View>
-        </View>
-      )}
 
       {/* Header Tetap Di Atas */}
       <View style={styles.header}>
@@ -115,7 +162,6 @@ export default function LoginScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* GUNAKAN BLURVIEW DISINI */}
         <BlurView intensity={80} tint="light" style={styles.loginCard}>
           <Text style={styles.loginTitle}>Login</Text>
 
@@ -159,15 +205,8 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9F6F2" },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
-  modalContainer: { width: "80%", backgroundColor: "white", borderRadius: 20, padding: 25, alignItems: "center" },
-  modalTitle: { fontSize: 20, fontWeight: "bold", color: "#333", marginTop: 10 },
-  modalMessage: { fontSize: 15, color: "#666", textAlign: "center", marginVertical: 15 },
-  modalButton: { paddingVertical: 12, paddingHorizontal: 30, borderRadius: 25, width: "100%", alignItems: "center" },
-  modalButtonText: { color: "white", fontWeight: "bold" },
-  successOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.3)", justifyContent: "center", alignItems: "center", zIndex: 1000 },
-  successBox: { width: 250, backgroundColor: "#fff", borderRadius: 20, padding: 25, alignItems: "center" },
-  successTitle: { marginTop: 10, fontSize: 18, fontWeight: "bold" },
+  
+  // Style Login Screen (Original)
   header: { flexDirection: "row", alignItems: "center", marginTop: 50, marginLeft: 20, position: 'absolute', top: 0, zIndex: 20 },
   logo: { width: 50, height: 50, marginRight: 8 },
   textBlock: { flexDirection: "column" },
@@ -177,13 +216,13 @@ const styles = StyleSheet.create({
   doctorImage: { width: "100%", height: 400, resizeMode: "contain" },
   scrollContent: { flexGrow: 1, justifyContent: "flex-end" },
   loginCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.4)", // Transparan agar blur terlihat
+    backgroundColor: "rgba(255, 255, 255, 0.4)",
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     paddingVertical: 50,
     paddingHorizontal: 30,
     alignItems: "center",
-    overflow: "hidden", // Agar isi tidak keluar dari border radius
+    overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.5)",
   },
@@ -202,4 +241,63 @@ const styles = StyleSheet.create({
   input: { flex: 1, color: "#fff", paddingRight: 10 },
   loginButton: { backgroundColor: "#2196F3", borderRadius: 25, paddingVertical: 12, paddingHorizontal: 50, marginTop: 30 },
   loginButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+});
+
+// === STYLES KHUSUS MODAL (Disalin dari HomeCatatanPartograf) ===
+const modalStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: 20
+  },
+  alertBox: {
+    width: "100%",
+    backgroundColor: THEME.card,
+    borderRadius: 18,
+    padding: 30,
+    alignItems: "center",
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: THEME.textMain,
+    marginBottom: 10,
+    textAlign: "center"
+  },
+  message: {
+    fontSize: 15,
+    color: THEME.textMain,
+    textAlign: "center",
+    marginBottom: 25,
+    lineHeight: 22
+  },
+  button: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  buttonText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 14,
+    textAlign: "center"
+  }
 });
