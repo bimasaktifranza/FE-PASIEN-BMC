@@ -30,7 +30,8 @@ export const SHADOW_STYLE = {
   elevation: 6,
 };
 
-export const BASE_URL_PATIENT = 'https://restful-api-bmc-production.up.railway.app/api/pasien';
+export const BASE_URL_PATIENT =
+  "https://restful-api-bmc-production-v2.up.railway.app/api/pasien";
 export const ASYNC_STORAGE_KEY = 'userToken';
 
 // Polyfill minimal atob untuk JWT decoding
