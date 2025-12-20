@@ -17,7 +17,8 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 
 // URL API yang disediakan
-const API_URL = 'https://restful-api-bmc-production.up.railway.app/api/konten-edukasi';
+const API_URL =
+  "https://restful-api-bmc-production-v2.up.railway.app/api/konten-edukasi";
 
 // Pewarnaan
 

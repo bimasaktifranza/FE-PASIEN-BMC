@@ -9,11 +9,47 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal, // Tambah Modal
 } from "react-native";
-import { FontAwesome } from "@expo/vector-icons";
+import { FontAwesome, Ionicons } from "@expo/vector-icons"; // Tambah Ionicons
 import { useNavigate } from "react-router-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// --- KOMPONEN ALERT MODERN (Re-usable dalam file ini) ---
+const CustomAlert = ({ visible, title, message, type, onClose }) => {
+  const isError = type === "error";
+  const iconName = isError ? "close-circle" : "information-circle";
+  const iconColor = isError ? "#F44336" : "#2196F3";
+
+  return (
+    <Modal
+      transparent
+      visible={visible}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <Ionicons
+            name={iconName}
+            size={60}
+            color={iconColor}
+            style={{ marginBottom: 10 }}
+          />
+          <Text style={styles.modalTitle}>{title}</Text>
+          <Text style={styles.modalMessage}>{message}</Text>
+          <TouchableOpacity
+            style={[styles.modalButton, { backgroundColor: iconColor }]}
+            onPress={onClose}
+          >
+            <Text style={styles.modalButtonText}>Tutup</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
@@ -24,25 +60,50 @@ export default function LoginScreen() {
 
   const [showSuccess, setShowSuccess] = useState(false);
 
+  // State untuk Custom Alert
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
+
   const navigate = useNavigate();
+
+  // Helper untuk memanggil alert
+  const showAlert = (title, message, type = "info") => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
+
+  const closeAlert = () => {
+    setAlertConfig({ ...alertConfig, visible: false });
+  };
 
   const handleLogin = async () => {
     if (!username || !password) {
-      alert("Username dan Password tidak boleh kosong.");
+      // GANTI alert() BIASA
+      showAlert(
+        "Data Belum Lengkap",
+        "Username dan Password tidak boleh kosong.",
+        "error"
+      );
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await fetch(`https://restful-api-bmc-production.up.railway.app/api/login-pasien`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json"
-        },
-        body: JSON.stringify({ username, password })
-      });
+      const response = await fetch(
+        `https://restful-api-bmc-production-v2.up.railway.app/api/login-pasien`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ username, password }),
+        }
+      );
 
       const data = await response.json();
 
@@ -67,7 +128,8 @@ export default function LoginScreen() {
       }, 1500);
     } catch (error) {
       setIsLoading(false);
-      alert(error.message);
+      // GANTI alert() BIASA
+      showAlert("Gagal Masuk", error.message, "error");
     }
   };
 
@@ -76,8 +138,17 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      {/* --- CUSTOM ALERT --- */}
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={closeAlert}
+      />
+
       {/* ============================ */}
-      {/*       POPUP SUKSES           */}
+      {/* POPUP SUKSES           */}
       {/* ============================ */}
       {showSuccess && (
         <View style={styles.successOverlay}>
@@ -89,7 +160,7 @@ export default function LoginScreen() {
       )}
 
       {/* ============================ */}
-      {/*            HEADER            */}
+      {/* HEADER            */}
       {/* ============================ */}
       <View style={styles.header}>
         <Image source={require("../../assets/Logo.png")} style={styles.logo} />
@@ -182,9 +253,56 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F9F6F2",
     alignItems: "center",
-    justifyContent: "flex-end"
+    justifyContent: "flex-end",
   },
 
+  // STYLES ALERT & MODAL
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    width: "80%",
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 25,
+    alignItems: "center",
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 10,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: "#666",
+    textAlign: "center",
+    marginVertical: 15,
+    lineHeight: 22,
+  },
+  modalButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    width: "100%",
+    alignItems: "center",
+  },
+  modalButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
+  // STYLES LAMA (TIDAK DIUBAH)
   successOverlay: {
     position: "absolute",
     top: 0,
@@ -194,7 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 999
+    zIndex: 999,
   },
   successBox: {
     width: 260,
@@ -203,34 +321,27 @@ const styles = StyleSheet.create({
     paddingVertical: 25,
     paddingHorizontal: 20,
     alignItems: "center",
-    elevation: 8
+    elevation: 8,
   },
   successTitle: {
     marginTop: 10,
     fontSize: 20,
     fontWeight: "bold",
-    color: "#333"
+    color: "#333",
   },
-  successDesc: {
-    marginTop: 5,
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center"
-  },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 50,
     marginLeft: 20,
     marginBottom: 10,
-    alignSelf: "flex-start"
+    alignSelf: "flex-start",
   },
   logo: {
     width: 55,
     height: 55,
     resizeMode: "contain",
-    marginRight: 6
+    marginRight: 6,
   },
   textBlock: { flexDirection: "column" },
   title: { fontSize: 22, fontWeight: "bold", color: "#000" },
@@ -241,18 +352,18 @@ const styles = StyleSheet.create({
     top: 100,
     left: 0,
     right: 0,
-    alignItems: "center"
+    alignItems: "center",
   },
   doctorImage: {
     width: "100%",
     height: 500,
-    resizeMode: "contain"
+    resizeMode: "contain",
   },
 
   scrollContent: {
     flexGrow: 1,
     justifyContent: "flex-end",
-    width: "100%"
+    width: "100%",
   },
   loginCard: {
     backgroundColor: "rgba(255, 255, 255, 0.92)",
@@ -262,14 +373,14 @@ const styles = StyleSheet.create({
     paddingVertical: 70,
     paddingHorizontal: 25,
     alignItems: "center",
-    elevation: 4
+    elevation: 4,
   },
   loginTitle: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#000",
     marginBottom: 10,
-    marginTop: -30
+    marginTop: -30,
   },
 
   label: {
@@ -277,7 +388,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: -10,
     fontSize: 14,
-    color: "#000"
+    color: "#000",
   },
   inputContainer: {
     flexDirection: "row",
@@ -287,12 +398,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginTop: 20,
     width: "97%",
-    height: 45
+    height: 45,
   },
   input: {
     flex: 1,
     color: "#fff",
-    fontSize: 14
+    fontSize: 14,
   },
   icon: { marginLeft: 10 },
 
@@ -301,11 +412,11 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     paddingVertical: 10,
     paddingHorizontal: 45,
-    marginTop: 20
+    marginTop: 20,
   },
   loginButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "bold"
-  }
+    fontWeight: "bold",
+  },
 });
