@@ -11,8 +11,7 @@ import {
   Easing,
   TouchableOpacity,
   Vibration,
-  // Alert, // Gak pake Alert bawaan lagi
-  Modal, // Pake Modal custom
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -42,7 +41,6 @@ import BottomTabBar from "../../components/BottomTabBar";
 const ModernAlert = ({ visible, title, message, type, actions }) => {
   if (!visible) return null;
 
-  // Tentukan Icon & Warna
   let iconName = "alert-circle";
   let color = COLORS.primaryBlue;
 
@@ -94,19 +92,22 @@ const ModernAlert = ({ visible, title, message, type, actions }) => {
 };
 
 // ==========================================
-// 1. SUB-COMPONENT: PANDUAN NAPAS
+// 1. COMPONENT: BREATHING MODAL (POP-UP)
 // ==========================================
-const BreathingGuide = () => {
+// Menggantikan BreathingGuide inline agar lebih fokus saat kontraksi
+const BreathingModal = ({ visible, onClose }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [textGuide, setTextGuide] = useState("Tarik Napas...");
 
   useEffect(() => {
+    if (!visible) return;
+
     let isMounted = true;
     const breathe = () => {
       if (!isMounted) return;
       setTextGuide("Tarik Napas... 😤");
       Animated.timing(scaleAnim, {
-        toValue: 1.4,
+        toValue: 1.5,
         duration: 4000,
         useNativeDriver: true,
         easing: Easing.inOut(Easing.ease),
@@ -122,27 +123,41 @@ const BreathingGuide = () => {
       });
     };
     breathe();
+    
     return () => {
       isMounted = false;
+      scaleAnim.setValue(1);
     };
-  }, [scaleAnim]);
+  }, [visible, scaleAnim]);
+
+  if (!visible) return null;
 
   return (
-    <View style={styles.breathingContainer}>
-      <Text style={styles.breathingTitle}>Panduan Napas & Rileks</Text>
-      <View style={styles.circleWrapper}>
-        <Animated.View
-          style={[
-            styles.breathingCircle,
-            { transform: [{ scale: scaleAnim }] },
-          ]}
-        />
-        <Text style={styles.breathingText}>{textGuide}</Text>
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+      <View style={styles.breathingOverlay}>
+        <View style={styles.breathingContainerModal}>
+          <Text style={styles.breathingTitle}>Sedang Kontraksi</Text>
+          
+          <View style={styles.circleWrapper}>
+            <Animated.View
+              style={[
+                styles.breathingCircle,
+                { transform: [{ scale: scaleAnim }] },
+              ]}
+            />
+            <Text style={styles.breathingText}>{textGuide}</Text>
+          </View>
+
+          <Text style={styles.breathingSub}>
+            Fokus pada lingkaran. Ikuti ritme napas untuk meredakan nyeri.
+          </Text>
+
+          <TouchableOpacity style={styles.closeBreathingBtn} onPress={onClose}>
+            <Text style={styles.closeBreathingText}>Kontraksi Selesai / Tutup</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      <Text style={styles.breathingSub}>
-        Ikuti ritme lingkaran untuk mengurangi nyeri kontraksi.
-      </Text>
-    </View>
+    </Modal>
   );
 };
 
@@ -187,6 +202,9 @@ export default function MainScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [panicLoading, setPanicLoading] = useState(false);
+  
+  // State untuk Breathing Modal
+  const [showBreathing, setShowBreathing] = useState(false);
 
   const [pasienName, setPasienName] = useState("");
   const [bidanName, setBidanName] = useState("Memuat Bidan...");
@@ -209,13 +227,12 @@ export default function MainScreen() {
     visible: false,
     title: "",
     message: "",
-    type: "info", // success, error, info
+    type: "info",
     actions: [],
   });
 
   const isFocusMode = pembukaan >= 4 && pembukaan < 10;
 
-  // Helper menutup alert
   const closeAlert = () => setAlertConfig({ ...alertConfig, visible: false });
 
   const fetchBidanData = async (pasienId, token) => {
@@ -326,14 +343,13 @@ export default function MainScreen() {
   }, [fetchData]);
 
   const handlePanic = async () => {
-    closeAlert(); // Tutup alert lama jika ada
+    closeAlert();
     Vibration.vibrate([0, 500, 200, 500]);
     setPanicLoading(true);
 
     try {
       const token = await getTokenFromStorage();
       if (!token) {
-        // ERROR SESSION
         setAlertConfig({
           visible: true,
           title: "Sesi Habis",
@@ -362,7 +378,6 @@ export default function MainScreen() {
         throw new Error(json.message || "Gagal mengirim sinyal.");
       }
 
-      // --- SUKSES ---
       setAlertConfig({
         visible: true,
         title: "SINYAL TERKIRIM!",
@@ -371,7 +386,6 @@ export default function MainScreen() {
         actions: [{ text: "SAYA MENGERTI", onPress: closeAlert }],
       });
     } catch (error) {
-      // --- GAGAL ---
       setAlertConfig({
         visible: true,
         title: "GAGAL TERKIRIM",
@@ -379,7 +393,7 @@ export default function MainScreen() {
         type: "error",
         actions: [
           { text: "BATAL", style: "cancel", onPress: closeAlert },
-          { text: "COBA LAGI", onPress: handlePanic }, // Rekursif panggil fungsi ini lagi
+          { text: "COBA LAGI", onPress: handlePanic },
         ],
       });
     } finally {
@@ -400,13 +414,19 @@ export default function MainScreen() {
 
   return (
     <View style={styles.containerFixed}>
-      {/* ALERT COMPONENT MODERN */}
+      {/* 1. GLOBAL ALERT COMPONENT */}
       <ModernAlert
         visible={alertConfig.visible}
         title={alertConfig.title}
         message={alertConfig.message}
         type={alertConfig.type}
         actions={alertConfig.actions}
+      />
+
+      {/* 2. BREATHING MODAL (Muncul saat tombol ditekan) */}
+      <BreathingModal 
+        visible={showBreathing} 
+        onClose={() => setShowBreathing(false)} 
       />
 
       <ScrollView
@@ -425,7 +445,7 @@ export default function MainScreen() {
 
         {isFocusMode ? (
           // ==========================================
-          // TAMPILAN MODE FOKUS (DARURAT)
+          // TAMPILAN MODE FOKUS (ACTIVE LABOR)
           // ==========================================
           <View style={styles.focusModeContainer}>
             <View style={{ marginBottom: 15, marginTop: 40 }}>
@@ -435,15 +455,6 @@ export default function MainScreen() {
                 waktuCatat={waktuCatat}
               />
             </View>
-
-            <PanicButton onPress={handlePanic} isLoading={panicLoading} />
-
-            <View style={{ marginTop: 5 }}>
-              <DjjStatusCard djj={djj} djjStatus={djjStatus} />
-            </View>
-
-            <BreathingGuide />
-
             <View style={{ marginTop: 10 }}>
               <IbuStatusCard
                 sistolik={sistolik}
@@ -452,6 +463,28 @@ export default function MainScreen() {
                 suhu={suhu}
               />
             </View>
+            <PanicButton onPress={handlePanic} isLoading={panicLoading} />
+
+            <View style={{ marginTop: 5 }}>
+              <DjjStatusCard djj={djj} djjStatus={djjStatus} />
+            </View>
+
+            <DilatationVisualizer pembukaan={pembukaan} />
+
+            <TouchableOpacity 
+                style={styles.contractionBtn} 
+                onPress={() => setShowBreathing(true)}
+                activeOpacity={0.7}
+            >
+                <View style={styles.contractionBtnIcon}>
+                    <Ionicons name="fitness" size={28} color={COLORS.primaryBlue} />
+                </View>
+                <View style={{flex: 1}}>
+                    <Text style={styles.contractionBtnText}>Mulai Panduan Napas</Text>
+                    <Text style={styles.contractionBtnSub}>Tekan ini saat kontraksi datang</Text>
+                </View>
+                <Ionicons name="play-circle" size={32} color={COLORS.primaryBlue} />
+            </TouchableOpacity>
 
             <Text style={styles.focusFooterText}>
               "Anda kuat, Bunda. Sebentar lagi bertemu si Kecil."
@@ -463,6 +496,18 @@ export default function MainScreen() {
           // ==========================================
           <>
             <HeaderGradient pasienName={pasienName} />
+
+            {/* TOMBOL LATIHAN NAPAS (OPTIONAL DI MODE NORMAL) */}
+            <TouchableOpacity 
+                style={[styles.contractionBtn, {marginTop: -20, marginBottom: 20}]} 
+                onPress={() => setShowBreathing(true)}
+             >
+                <View style={{flex: 1}}>
+                    <Text style={styles.contractionBtnText}>Latihan Pernapasan</Text>
+                    <Text style={styles.contractionBtnSub}>Simulasi relaksasi napas</Text>
+                </View>
+                <Ionicons name="leaf-outline" size={24} color={COLORS.primaryBlue} />
+             </TouchableOpacity>
 
             <MidwifeCard
               bidanName={bidanName}
@@ -510,7 +555,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // MODAL STYLES
+  // MODAL STYLES (ALERT)
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -567,33 +612,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Focus Mode Styles
-  focusModeContainer: {
-    marginTop: 10,
-    paddingBottom: 20,
-  },
-  breathingContainer: {
-    marginHorizontal: 18,
-    backgroundColor: COLORS.white,
-    borderRadius: 24,
-    padding: 25,
+  // STYLES BARU UNTUK BREATHING MODAL
+  breathingOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,10,30, 0.9)", // Background gelap
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 25,
-    ...SHADOW_STYLE,
-    borderWidth: 1,
-    borderColor: COLORS.lightBlue,
+    padding: 20,
   },
-  breathingTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.darkBlue,
-    marginBottom: 20,
+  breathingContainerModal: {
+    width: '100%',
+    backgroundColor: COLORS.white,
+    borderRadius: 30,
+    padding: 30,
+    alignItems: "center",
+    elevation: 10,
+  },
+  closeBreathingBtn: {
+    marginTop: 30,
+    backgroundColor: COLORS.primaryBlue,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 50,
+    width: '100%',
+    alignItems: 'center'
+  },
+  closeBreathingText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold'
   },
   circleWrapper: {
     height: 160,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginVertical: 20,
   },
   breathingCircle: {
     width: 80,
@@ -610,14 +663,57 @@ const styles = StyleSheet.create({
     zIndex: 2,
     textAlign: "center",
   },
+  breathingTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: COLORS.darkBlue,
+  },
   breathingSub: {
     textAlign: "center",
     color: COLORS.textSecondary,
     fontSize: 14,
     lineHeight: 20,
-    maxWidth: "80%",
+    marginTop: 10,
   },
 
+  // STYLES BARU UNTUK TOMBOL PEMICU (TRIGGER)
+  contractionBtn: {
+    marginHorizontal: 18,
+    marginBottom: 15,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.primaryBlue,
+    ...SHADOW_STYLE,
+  },
+  contractionBtnIcon: {
+    width: 50, 
+    height: 50, 
+    borderRadius: 25, 
+    backgroundColor: COLORS.lightBlue, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  contractionBtnText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.primaryBlue,
+    marginLeft: 15,
+  },
+  contractionBtnSub: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginLeft: 15,
+  },
+
+  // Focus Mode Styles Lainnya
+  focusModeContainer: {
+    marginTop: 10,
+    paddingBottom: 20,
+  },
   panicButton: {
     marginHorizontal: 18,
     marginBottom: 25,

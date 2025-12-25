@@ -7,7 +7,7 @@ import { COLORS, SHADOW_STYLE, width } from '../utils/global';
 const DILATATION_METAPHORS = [
   { cm: 0, text: 'Fase Laten', metaphor: 'Ujung Jari', caption: 'Jalan lahir masih dalam fase awal, Bunda bisa beristirahat.', progress: 0.1, icon: 'bed-outline' },
   { cm: 4, text: 'Fase Aktif Awal', metaphor: 'Jeruk Nipis (Irisan)', caption: 'Pembukaan aktif dimulai. Fokus pada pernapasan.', progress: 0.4, icon: 'walk-outline' },
-  { cm: 5, text: 'Fase Aktif', metaphor: 'Buah Kiwi', caption: 'Hampir setengah jalan! Terus bergerak dan bernapas.', progress: 0.5, icon: 'hourglass-half-outline' },
+  { cm: 5, text: 'Fase Aktif', metaphor: 'Buah Kiwi', caption: 'Hampir setengah jalan! Terus bergerak dan bernapas.', progress: 0.5, icon: 'heart-circle-outline' },
   { cm: 6, text: 'Fase Aktif Lanjut', metaphor: 'Kue Marie / Kuki', caption: 'Lebih dari setengah jalan! Pertahankan fokus dan energi.', progress: 0.6, icon: 'heart-circle-outline' },
   { cm: 7, text: 'Fase Transisi', metaphor: 'Tomat Merah', caption: 'Masa transisi yang intens. Ingat tujuan Bunda!', progress: 0.7, icon: 'flash-outline' },
   { cm: 8, text: 'Fase Transisi', metaphor: 'Jeruk Sunkist / Apel', caption: 'Pembukaan semakin cepat. Bunda hebat!', progress: 0.8, icon: 'fast-food-outline' },

@@ -148,7 +148,7 @@ export const getIbuStatus = (sistolik, diastolik, nadi_ibu, suhu_ibu) => {
     }
     // 2. Cek Suhu
     if (h > 37.5) {
-        issues.push('Suhu tubuh tinggi (Demam)');
+        issues.push('Suhu tubuh bunda tinggi (Demam)');
         detail['suhu'] = {
             icon: 'thermometer-high',
             color: COLORS.accentError, 
@@ -200,7 +200,7 @@ export const getIbuStatus = (sistolik, diastolik, nadi_ibu, suhu_ibu) => {
         return {
             status: isCritical ? 'PERLU WASPADA' : 'PERLU PERHATIAN',
             color: isCritical ? COLORS.accentError : COLORS.accentWarning, 
-            message: `Terdapat ${issues.length} potensi masalah: ${issues.join(', ')}. Segera hubungi Bidan Anda.`,
+            message: `${issues.join(', ')}. Ini perlu segera diperikas oleh bidan.`,
             issues: issues,
             detail: detail,
         };
