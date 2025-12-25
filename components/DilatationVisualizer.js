@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Progress from 'react-native-progress';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOW_STYLE, width } from '../utils/global';
+import DilatationScaleModal from './DilatationScaleModal'; // Import komponen baru
 
 const DILATATION_METAPHORS = [
   { cm: 0, text: 'Fase Laten', metaphor: 'Ujung Jari', caption: 'Jalan lahir masih dalam fase awal, Bunda bisa beristirahat.', progress: 0.1, icon: 'bed-outline' },
@@ -16,6 +17,9 @@ const DILATATION_METAPHORS = [
 ];
 
 const DilatationVisualizer = ({ pembukaan }) => {
+  // State untuk mengontrol visibilitas Modal Skala
+  const [modalVisible, setModalVisible] = useState(false);
+
   const dilatation = parseFloat(pembukaan);
   const dilatationString = (isNaN(dilatation) || dilatation < 0) ? '---' : dilatation.toFixed(1).replace('.0', '');
   const displayCm = (isNaN(dilatation) || dilatation < 0) ? 'N/A' : `${dilatationString} cm`;
@@ -75,7 +79,26 @@ const DilatationVisualizer = ({ pembukaan }) => {
             </View>
           </View>
         </View>
+
+        {/* --- BUTTON BARU DITAMBAHKAN DI SINI --- */}
+        <TouchableOpacity 
+          style={styles.scaleButton} 
+          onPress={() => setModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="apps-outline" size={20} color={COLORS.white} />
+          <Text style={styles.scaleButtonText}>Lihat Skala Lengkap (Gambar)</Text>
+        </TouchableOpacity>
+        {/* --------------------------------------- */}
+
       </View>
+
+      {/* Komponen Modal disisipkan di sini */}
+      <DilatationScaleModal 
+        visible={modalVisible} 
+        onClose={() => setModalVisible(false)}
+        currentDilatation={dilatation}
+      />
     </View>
   );
 };
@@ -103,6 +126,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
+    marginBottom: 15, // Tambahkan margin bawah agar tidak nempel dengan button baru
   },
   visualizerLeft: {
     alignItems: 'center',
@@ -158,6 +182,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textPrimary,
     marginTop: 2,
+  },
+  // Style Baru untuk Tombol
+  scaleButton: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.primaryBlue || '#4A90E2', // Fallback color jika primaryBlue undefined
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 5,
+  },
+  scaleButtonText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
 
